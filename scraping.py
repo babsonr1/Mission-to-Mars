@@ -16,7 +16,8 @@ def scrapeAll():
         "news_paragraph": newsParagraph,
         "featured_image": featuredImage(browser),
         "facts": marsFacts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "image_url": hemisphereData()
     }
 
     browser.quit()
@@ -44,48 +45,49 @@ def marsNews(browser):
 
 
 def featuredImage(browser):
-    # Visit URL
     url = 'https://data-class-jpl-space.s3.amazonaws.com/JPL_Space/index.html'
     browser.visit(url)
 
-    # Find and click the full image button
     fullImageElem = browser.find_by_tag('button')[1]
     fullImageElem.click()
 
-    # Parse the resulting html with soup
     html = browser.html
     imgSoup = soup(html, 'html.parser')
 
-    # Add try/except for error handling
     try:
-        # Find the relative image url
         imgUrlRel = imgSoup.find('img', class_='fancybox-image').get('src')
 
     except AttributeError:
         return None
 
-    # Use the base url to create an absolute url
     imgUrl = f'https://data-class-jpl-space.s3.amazonaws.com/JPL_Space/{imgUrlRel}'
 
     return imgUrl
 
 def marsFacts():
-    # Add try/except for error handling
     try:
-        # Use 'read_html' to scrape the facts table into a dataframe
         df = pd.read_html('https://data-class-mars-facts.s3.amazonaws.com/Mars_Facts/index.html')[0]
 
     except BaseException:
         return None
 
-    # Assign columns and set index of dataframe
     df.columns=['Description', 'Mars', 'Earth']
     df.set_index('Description', inplace=True)
 
-    # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
 
-if __name__ == "__main__":
+def hemisphereData(browser):
+    try:
+        hemisphereImageUrls = []
+        html = browser.html
+        imgSoup = soup(html, 'html.parser')
+        imageUrlTable = imgSoup.find_all('img', class_='thumb')
+        for tag in imageUrlTable:
+            hemisphereImageUrls.append(tag.get('src'))
+        return hemisphereImageUrls
+    except AttributeError:
+        return None
 
-    # If running as script, print scraped data
+
+if __name__ == "__main__":
     print(scrapeAll())
